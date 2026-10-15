@@ -1,0 +1,4 @@
+target/
+atomikos-log/
+.idea/
+*.iml

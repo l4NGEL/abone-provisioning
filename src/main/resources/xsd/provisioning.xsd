@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="urn:abone:provisioning:1"
+           targetNamespace="urn:abone:provisioning:1"
+           elementFormDefault="qualified">
+
+    <xs:simpleType name="Msisdn">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="905[0-9]{9}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="SiparisTipi">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="AKTIVASYON"/>
+            <xs:enumeration value="TARIFE_DEGISIKLIGI"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="Siparis">
+        <xs:sequence>
+            <xs:element name="siparisId" type="xs:long"/>
+            <xs:element name="istemciRef" type="xs:string"/>
+            <xs:element name="tip" type="tns:SiparisTipi"/>
+            <xs:element name="msisdn" type="tns:Msisdn"/>
+            <xs:element name="hedefTarifeKodu" type="xs:string" minOccurs="0"/>
+            <xs:element name="durum" type="xs:string"/>
+            <xs:element name="hataMesaji" type="xs:string" minOccurs="0"/>
+            <xs:element name="kistUcret" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="devredenMb" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="olusturma" type="xs:dateTime"/>
+            <xs:element name="tamamlanma" type="xs:dateTime" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="SiparisOlusturRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="istemciRef">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:minLength value="1"/>
+                            <xs:maxLength value="64"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="tip" type="tns:SiparisTipi"/>
+                <xs:element name="msisdn" type="tns:Msisdn"/>
+                <xs:element name="hedefTarifeKodu" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="SiparisOlusturResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="siparis" type="tns:Siparis"/>
+                <xs:element name="tekrarIstek" type="xs:boolean"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="SiparisSorgulaRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="siparisId" type="xs:long"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="SiparisSorgulaResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="siparis" type="tns:Siparis"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="HatSorgulaRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="msisdn" type="tns:Msisdn"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="HatSorgulaResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="msisdn" type="tns:Msisdn"/>
+                <xs:element name="aboneAdi" type="xs:string"/>
+                <xs:element name="durum" type="xs:string"/>
+                <xs:element name="tarifeKodu" type="xs:string"/>
+                <xs:element name="tarifeAdi" type="xs:string"/>
+                <xs:element name="kotaMb" type="xs:decimal"/>
+                <xs:element name="kalanKotaMb" type="xs:decimal"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

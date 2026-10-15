@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="tr"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces"
+      xmlns:pt="jakarta.faces.passthrough">
+<h:head>
+    <title>Abone Provisioning - Operatör</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <h:outputStylesheet name="operator.css"/>
+</h:head>
+<h:body>
+    <header class="ust">
+        <h1>Hat İşlemleri</h1>
+        <span class="alt">Aktivasyon ve tarife değişikliği · sipariş durumu otomatik yenilenir</span>
+    </header>
+
+    <h:form id="form">
+        <p:growl id="bildirim" showDetail="false" life="4000" globalOnly="true"/>
+
+        <div class="izgara">
+            <!-- 1) Hat sorgulama: Enter ile çalışır, açılışta odak burada -->
+            <p:panel header="Hat sorgula" styleClass="kart">
+                <div class="satir">
+                    <p:outputLabel for="msisdn" value="MSISDN"/>
+                    <p:inputText id="msisdn" value="#{operatorBean.msisdn}" required="true"
+                                 requiredMessage="MSISDN girin" maxlength="12" autocomplete="off"
+                                 placeholder="905XXXXXXXXX" styleClass="genis" pt:inputmode="numeric"
+                                 validatorMessage="905 ile başlayan 12 haneli numara girin">
+                        <f:validateRegex pattern="905\d{9}"/>
+                    </p:inputText>
+                    <p:commandButton id="sorgula" value="Sorgula" icon="pi pi-search"
+                                     action="#{operatorBean.sorgula}" process="@this msisdn"
+                                     update="@form"/>
+                </div>
+                <p:message for="msisdn" display="text"/>
+                <p:defaultCommand target="sorgula"/>
+                <p:focus for="msisdn"/>
+
+                <h:panelGroup rendered="#{operatorBean.hat ne null}" layout="block" styleClass="ozet">
+                    <dl>
+                        <dt>Abone</dt><dd>#{operatorBean.hat.aboneAdi}</dd>
+                        <dt>Durum</dt>
+                        <dd><p:tag value="#{operatorBean.hat.durum}"
+                                   severity="#{operatorBean.hat.durum eq 'AKTIF' ? 'success' : (operatorBean.hat.durum eq 'BEKLEMEDE' ? 'warning' : 'danger')}"/></dd>
+                        <dt>Tarife</dt>
+                        <dd>#{operatorBean.hat.tarifeAdi} (#{operatorBean.hat.tarifeKodu}) ·
+                            <h:outputText value="#{operatorBean.hat.aylikUcret}">
+                                <f:convertNumber type="currency" currencySymbol="₺" locale="tr_TR"/>
+                            </h:outputText>/ay</dd>
+                        <dt>Kalan kota</dt>
+                        <dd>
+                            <p:progressBar value="#{operatorBean.kalanYuzde}" displayOnly="true"
+                                           labelTemplate="{value}%" styleClass="kota"
+                                           title="Dönem kotasının kalan yüzdesi"/>
+                            <h:outputText value="#{operatorBean.hat.kalanKotaMb}">
+                                <f:convertNumber maxFractionDigits="0" locale="tr_TR"/>
+                            </h:outputText> /
+                            <h:outputText value="#{operatorBean.hat.kotaMb}">
+                                <f:convertNumber maxFractionDigits="0" locale="tr_TR"/>
+                            </h:outputText> MB
+                        </dd>
+                    </dl>
+                </h:panelGroup>
+            </p:panel>
+
+            <!-- 2) İşlem: yalnızca hatta uygulanabilen işlem gösterilir -->
+            <p:panel header="İşlem" styleClass="kart" rendered="#{operatorBean.hat ne null}">
+                <h:panelGroup rendered="#{operatorBean.aktivasyonaUygun}" layout="block">
+                    <p>Hat beklemede. Aktivasyonda bu ayın kalan günleri için kıst ücret kesilir.</p>
+                    <p:commandButton value="Hattı aktive et" icon="pi pi-check" action="#{operatorBean.aktiveEt}"
+                                     process="@this" update="@form">
+                        <p:confirm header="Aktivasyon" message="#{operatorBean.hat.msisdn} aktive edilsin mi?"
+                                   icon="pi pi-exclamation-triangle"/>
+                    </p:commandButton>
+                </h:panelGroup>
+
+                <h:panelGroup rendered="#{operatorBean.tarifeDegisimineUygun}" layout="block">
+                    <div class="satir">
+                        <p:outputLabel for="hedef" value="Yeni tarife"/>
+                        <p:selectOneMenu id="hedef" value="#{operatorBean.hedefTarifeKodu}" required="true"
+                                         requiredMessage="Tarife seçin" styleClass="genis">
+                            <f:selectItem itemLabel="Seçin…" itemValue="#{null}" noSelectionOption="true"/>
+                            <f:selectItems value="#{operatorBean.hedefTarifeler}" var="t" itemValue="#{t.kod}"
+                                           itemLabel="#{t.ad} · #{t.dataMb / 1024} GB · #{t.aylikUcret} ₺"/>
+                        </p:selectOneMenu>
+                    </div>
+                    <p:message for="hedef" display="text"/>
+                    <p class="ipucu">Kalan günler için eski tarife iade, yeni tarife kıst olarak faturalanır;
+                        kullanılmayan kota yeni tarifeye devreder.</p>
+                    <p:commandButton value="Tarifeyi değiştir" icon="pi pi-sync" action="#{operatorBean.tarifeDegistir}"
+                                     process="@this hedef" update="@form">
+                        <p:confirm header="Tarife değişikliği" message="Tarife değişikliği onaylansın mı?"
+                                   icon="pi pi-exclamation-triangle"/>
+                    </p:commandButton>
+                </h:panelGroup>
+
+                <h:panelGroup rendered="#{not operatorBean.aktivasyonaUygun and not operatorBean.tarifeDegisimineUygun}"
+                              layout="block">
+                    <p>Bu hat durumunda (#{operatorBean.hat.durum}) yapılabilecek işlem yok.</p>
+                </h:panelGroup>
+
+                <p:dataTable value="#{operatorBean.faturaKalemleri}" var="k" size="small"
+                             emptyMessage="Fatura kalemi yok" styleClass="kalemler">
+                    <f:facet name="header">Fatura kalemleri</f:facet>
+                    <p:column headerText="Dönem" width="80">#{k.donem}</p:column>
+                    <p:column headerText="Açıklama">#{k.aciklama}</p:column>
+                    <p:column headerText="Tutar" styleClass="sayi" width="110">
+                        <h:outputText value="#{k.tutar}"><f:convertNumber minFractionDigits="2" locale="tr_TR"/></h:outputText>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </div>
+
+        <!-- 3) Son siparişler: bekleyen varsa 2 sn'de bir yenilenir, yoksa durur -->
+        <p:panel header="Son siparişler" styleClass="kart">
+            <p:poll id="yoklama" interval="2" listener="#{operatorBean.yenile}" update="@form"
+                    process="@this" global="false" stop="#{not operatorBean.bekleyenVar}"/>
+            <p:dataTable id="siparisler" value="#{operatorBean.sonSiparisler}" var="s" size="small"
+                         emptyMessage="Henüz sipariş yok" rowKey="#{s.id}">
+                <p:column headerText="#" width="60">#{s.id}</p:column>
+                <p:column headerText="MSISDN">#{s.msisdn}</p:column>
+                <p:column headerText="Tip">#{s.tip eq 'AKTIVASYON' ? 'Aktivasyon' : 'Tarife → '.concat(s.hedefTarifeKodu)}</p:column>
+                <p:column headerText="Kanal" width="70">#{s.kanal}</p:column>
+                <p:column headerText="Durum" width="120">
+                    <p:tag value="#{s.durum}"
+                           severity="#{s.durum eq 'TAMAMLANDI' ? 'success' : (s.durum eq 'ALINDI' ? 'info' : 'danger')}"
+                           title="#{s.hataMesaji}"/>
+                </p:column>
+                <p:column headerText="Kıst ücret" styleClass="sayi" width="110">
+                    <h:outputText value="#{s.kistUcret}" rendered="#{s.kistUcret ne null}">
+                        <f:convertNumber minFractionDigits="2" locale="tr_TR"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="Açıklama">#{s.hataMesaji}</p:column>
+            </p:dataTable>
+        </p:panel>
+
+        <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" closeOnEscape="true">
+            <p:commandButton value="Evet" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+            <p:commandButton value="Vazgeç" type="button" styleClass="ui-confirmdialog-no ui-button-secondary"
+                             icon="pi pi-times"/>
+        </p:confirmDialog>
+    </h:form>
+</h:body>
+</html>

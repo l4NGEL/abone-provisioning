@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: abone-provisioning
+  main:
+    banner-mode: off
+  flyway:
+    # Flyway XA havuzunu kullanmaz; kendi kisa omurlu baglantisini acar
+    url: ${app.oracle.url}
+    user: ${app.oracle.kullanici}
+    password: ${app.oracle.sifre}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+  jms:
+    listener:
+      receive-timeout: 1s
+  mvc:
+    problemdetails:
+      enabled: true
+  webservices:
+    path: /ws
+    servlet:
+      init:
+        transformWsdlLocations: true
+
+app:
+  oracle:
+    url: ${ORACLE_URL:jdbc:oracle:thin:@//localhost:1521/FREEPDB1}
+    kullanici: ${ORACLE_USER:abone}
+    sifre: ${ORACLE_PASSWORD:abone}
+    havuz: ${ORACLE_POOL:20}
+  artemis:
+    url: ${ARTEMIS_URL:tcp://localhost:61616}
+    kullanici: ${ARTEMIS_USER:artemis}
+    sifre: ${ARTEMIS_PASSWORD:artemis}
+    havuz: ${ARTEMIS_POOL:16}
+  jta:
+    tm-adi: ${ATOMIKOS_TM_NAME:abone-prov-yerel}
+    log-dizini: ${ATOMIKOS_LOG_DIR:./atomikos-log}
+    zaman-asimi-sn: 30
+  jms:
+    eszamanlilik: ${JMS_CONCURRENCY:4-8}
+
+joinfaces:
+  faces:
+    project-stage: production
+  primefaces:
+    theme: saga
+    font-awesome: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    jms:
+      enabled: true
+
+logging:
+  level:
+    com.atomikos: WARN
+    org.apache.activemq.artemis: WARN

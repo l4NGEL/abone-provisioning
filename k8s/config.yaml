@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: abone-ayarlar
+data:
+  ORACLE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+  ORACLE_USER: abone
+  ORACLE_POOL: "20"
+  ARTEMIS_URL: tcp://artemis:61616
+  ARTEMIS_USER: artemis
+  ARTEMIS_POOL: "16"
+  JMS_CONCURRENCY: "4-8"
+  ATOMIKOS_LOG_DIR: /var/lib/abone/atomikos
+  JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75

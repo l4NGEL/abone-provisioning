@@ -1,0 +1,15 @@
+# Yalnizca OpenShift: `oc apply -n abone-provisioning -f k8s/openshift-route.yaml`
+# (kustomization'a dahil degil; vanilla Kubernetes'te Route CRD'si yok, orada Ingress kullanilir)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: abone-provisioning
+spec:
+  to:
+    kind: Service
+    name: abone-provisioning
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

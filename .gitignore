@@ -1,0 +1,11 @@
+target/
+.mvn/wrapper/maven-wrapper.jar
+atomikos-log/
+perf/sonuclar/*.json
+
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

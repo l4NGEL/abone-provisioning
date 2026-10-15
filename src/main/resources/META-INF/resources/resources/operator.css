@@ -1,0 +1,80 @@
+body {
+    margin: 0;
+    padding: 0 16px 32px;
+    background: #f4f6f8;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.ust {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    padding: 16px 0 8px;
+}
+
+.ust h1 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.ust .alt {
+    color: #5f6b7a;
+}
+
+.izgara {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.kart {
+    max-width: 100%;
+}
+
+.satir {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.genis {
+    min-width: 220px;
+}
+
+.ozet dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin: 16px 0 0;
+}
+
+.ozet dt {
+    color: #5f6b7a;
+}
+
+.ozet dd {
+    margin: 0;
+}
+
+.kota {
+    height: 10px;
+    margin-bottom: 4px;
+    max-width: 260px;
+}
+
+.ipucu {
+    color: #5f6b7a;
+    font-size: 0.9rem;
+}
+
+.kalemler {
+    margin-top: 16px;
+}
+
+.sayi {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}

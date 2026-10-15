@@ -1,0 +1,70 @@
+name: abone-provisioning
+
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:-sys_parola}
+      APP_USER: abone
+      APP_USER_PASSWORD: ${ORACLE_PASSWORD:-abone}
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-veri:/opt/oracle/oradata
+      - ./db/init:/container-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  artemis:
+    image: apache/activemq-artemis:2.42.0-alpine
+    environment:
+      ARTEMIS_USER: artemis
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-artemis}
+      ANONYMOUS_LOGIN: "false"
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    healthcheck:
+      test: ["CMD-SHELL", "/var/lib/artemis-instance/bin/artemis check node --silent --user artemis --password $${ARTEMIS_PASSWORD} > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 15s
+      retries: 20
+      start_period: 15s
+
+  app:
+    build: .
+    image: abone-provisioning:yerel
+    depends_on:
+      oracle:
+        condition: service_healthy
+      artemis:
+        condition: service_healthy
+    environment:
+      ORACLE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      ORACLE_USER: abone
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-abone}
+      ARTEMIS_URL: tcp://artemis:61616
+      ARTEMIS_USER: artemis
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-artemis}
+      ATOMIKOS_TM_NAME: abone-prov-compose
+      ATOMIKOS_LOG_DIR: /var/lib/abone/atomikos
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
+    ports:
+      - "8080:8080"
+    volumes:
+      # yarim kalmis 2PC'lerin yeniden baslatmada tamamlanabilmesi icin islem log'u kalici
+      - atomikos-log:/var/lib/abone/atomikos
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  oracle-veri:
+  atomikos-log:

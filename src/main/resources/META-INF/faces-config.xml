@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<faces-config xmlns="https://jakarta.ee/xml/ns/jakartaee"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-facesconfig_4_0.xsd"
+              version="4.0">
+    <application>
+        <el-resolver>dev.abone.provisioning.web.RecordElCozucu</el-resolver>
+        <locale-config>
+            <default-locale>tr</default-locale>
+        </locale-config>
+    </application>
+</faces-config>
