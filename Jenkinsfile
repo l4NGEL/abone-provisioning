@@ -35,6 +35,25 @@ pipeline {
             }
         }
 
+        stage('Statik analiz (SonarQube)') {
+            steps {
+                // 'sonarqube' adli sunucu Jenkins > Manage > System altinda tanimli; token oradan gelir.
+                // JaCoCo raporu bir onceki asamada target/site/jacoco altina yazildi.
+                withSonarQubeEnv('sonarqube') {
+                    sh './mvnw -B -ntp sonar:sonar'
+                }
+            }
+        }
+
+        stage('Kalite kapisi') {
+            steps {
+                // SonarQube webhook'u Jenkins'e sonucu bildirene kadar bekler; kapi gecmezse derleme durur
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
         stage('Imaj') {
             steps {
                 sh 'docker build -t "$IMAGE:$TAG" .'

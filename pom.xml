@@ -21,6 +21,14 @@
         <joinfaces.version>5.5.15</joinfaces.version>
         <atomikos.version>6.0.1</atomikos.version>
         <ojdbc.version>23.26.3.0.0</ojdbc.version>
+        <jacoco.version>0.8.13</jacoco.version>
+        <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
+
+        <sonar.projectKey>abone-provisioning</sonar.projectKey>
+        <sonar.projectName>abone-provisioning</sonar.projectName>
+        <!-- XSD'den uretilen SOAP siniflari analiz ve kapsama disi -->
+        <sonar.exclusions>**/soap/model/**</sonar.exclusions>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
     <dependencyManagement>
@@ -189,6 +197,40 @@
                     <forkCount>1</forkCount>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>ajan</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>rapor</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <excludes>
+                                <exclude>dev/abone/provisioning/soap/model/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>${sonar-maven-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 </project>

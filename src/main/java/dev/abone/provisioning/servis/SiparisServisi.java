@@ -12,7 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * REST, SOAP ve JSF'in ortak giris noktasi. Bilerek islemsiz: kayit islemi commit'te
@@ -30,17 +32,22 @@ public class SiparisServisi {
     private final SiparisKayitServisi kayit;
     private final SiparisRepository siparisler;
     private final Counter cakismaSayaci;
+    // olustur() islemsiz oldugundan icerideki okumalar proxy'den gecmez; salt-okunur islemi acikca acar
+    private final TransactionTemplate saltOkunur;
 
-    public SiparisServisi(SiparisKayitServisi kayit, SiparisRepository siparisler, MeterRegistry metrikler) {
+    public SiparisServisi(SiparisKayitServisi kayit, SiparisRepository siparisler, MeterRegistry metrikler,
+            PlatformTransactionManager islemYoneticisi) {
         this.kayit = kayit;
         this.siparisler = siparisler;
+        this.saltOkunur = new TransactionTemplate(islemYoneticisi);
+        this.saltOkunur.setReadOnly(true);
         this.cakismaSayaci = Counter.builder("provisioning.siparis.istemci_ref_cakismasi")
                 .description("Commit aninda tekillik ihlaliyle geri alinan (XA rollback) es zamanli tekrar istekler")
                 .register(metrikler);
     }
 
     public Sonuc olustur(SiparisKomutu komut, Kanal kanal) {
-        Optional<SiparisGorunumu> mevcut = istemciRefIle(komut.istemciRef());
+        Optional<SiparisGorunumu> mevcut = saltOkunurIstemciRefIle(komut.istemciRef());
         if (mevcut.isPresent()) {
             return new Sonuc(ayniIstekMi(mevcut.get(), komut), true);
         }
@@ -49,7 +56,7 @@ public class SiparisServisi {
         } catch (Hatalar.KayitBulunamadi | Hatalar.GecersizIstek e) {
             throw e;
         } catch (RuntimeException e) {
-            Optional<SiparisGorunumu> kazanan = istemciRefIle(komut.istemciRef());
+            Optional<SiparisGorunumu> kazanan = saltOkunurIstemciRefIle(komut.istemciRef());
             if (kazanan.isEmpty()) {
                 throw e;
             }
@@ -58,6 +65,11 @@ public class SiparisServisi {
                     komut.istemciRef(), kazanan.get().id());
             return new Sonuc(ayniIstekMi(kazanan.get(), komut), true);
         }
+    }
+
+    private Optional<SiparisGorunumu> saltOkunurIstemciRefIle(String istemciRef) {
+        return Optional.ofNullable(saltOkunur.execute(
+                durum -> siparisler.findByIstemciRef(istemciRef).map(SiparisGorunumu::from).orElse(null)));
     }
 
     private static SiparisGorunumu ayniIstekMi(SiparisGorunumu mevcut, SiparisKomutu komut) {

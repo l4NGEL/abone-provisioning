@@ -1,0 +1,44 @@
+# Yerel statik analiz icin tek dugumlu SonarQube (gomulu H2 yerine PostgreSQL).
+# Kullanim: README "Statik analiz (SonarQube)" bolumu.
+name: abone-sonar
+
+services:
+  sonar-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - sonar-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar"]
+      interval: 5s
+      retries: 20
+
+  sonarqube:
+    image: sonarqube:25.9.0.112764-community
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+      # Elasticsearch'in bootstrap kontrolleri Docker Desktop/WSL2'de vm.max_map_count yuzunden takiliyor
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonar-data:/opt/sonarqube/data
+      - sonar-extensions:/opt/sonarqube/extensions
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      retries: 30
+      start_period: 60s
+
+volumes:
+  sonar-db:
+  sonar-data:
+  sonar-extensions:

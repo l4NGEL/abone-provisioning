@@ -7,7 +7,7 @@ bir JSF operatör ekranından yapılabiliyor.
 
 Spring Boot 3.5 · Java 17 · JPA/Hibernate · Oracle 23ai Free · PL/SQL · ActiveMQ Artemis (JMS) ·
 Atomikos (JTA/XA) · Spring-WS (SOAP, contract-first) · JSF 4 + PrimeFaces (JoinFaces) · Flyway ·
-JUnit 5 + Testcontainers · k6 · Docker Compose · Jenkins · Kubernetes/OpenShift
+JUnit 5 + Testcontainers · JaCoCo · SonarQube · k6 · Docker Compose · Jenkins · Kubernetes/OpenShift
 
 Tüm veriler sentetiktir (uydurma ad ve TCKN'ler).
 
@@ -164,6 +164,42 @@ kaldı. Artık `USER_OBJECTS`'te geçersiz nesne varsa test kırılıyor.
 JSF etkileşimi (sorgula → aktive et → onay → yoklamayla tamamlanma) tarayıcıda elle denendi;
 otomatik bir UI testi (Selenium vb.) yok.
 
+## Statik analiz (SonarQube)
+
+`./mvnw verify` testlerle birlikte JaCoCo kapsama raporunu (`target/site/jacoco/jacoco.xml`) üretiyor;
+`sonar:sonar` bu raporu SonarQube'a gönderiyor. XSD'den üretilen SOAP sınıfları analiz ve kapsama
+dışında. Yerelde denemek için [sonar/docker-compose.yml](sonar/docker-compose.yml) SonarQube Community
+25.9 + PostgreSQL kaldırıyor:
+
+```bash
+docker compose -f sonar/docker-compose.yml up -d --wait
+./mvnw -B verify sonar:sonar -Dsonar.host.url=http://localhost:9000 -Dsonar.token=<analiz token'ı>
+```
+
+Varsayılan "Sonar way" kalite kapısıyla son analiz (1.722 satır Java):
+
+| Ölçüt | Değer |
+|---|---|
+| Kalite kapısı | geçti |
+| Bug / zafiyet / security hotspot | 0 / 0 / 0 |
+| Güvenilirlik · güvenlik · bakım notu | A · A · A |
+| Satır kapsaması | %76,6 |
+| Tekrarlanan satır | %0 |
+| Code smell | 17 |
+
+İlk analiz güvenilirlikte **E** verdi. `SiparisServisi.olustur()` bilerek işlemsiz (commit'te tekillik
+ihlali olursa kazanan siparişi yeni bir işlemde okuyabilmek için), ama içeride `this.istemciRefIle()`
+çağırıyordu; kendi kendine çağrı Spring proxy'sinden geçmediği için `@Transactional(readOnly = true)`
+hiç uygulanmıyordu. Okuma `@EntityGraph` sayesinde yine doğru sonuç verdiğinden testler bunu
+yakalamamıştı. Artık bu okumalar `TransactionTemplate` ile açıkça salt-okunur işlemde koşuyor;
+`HatServisi.kullanimEkle` da aynı nedenle `ozet()`'i çağırıp hattı ikinci kez sorgulamak yerine elindeki
+hattan özet üretiyor.
+
+Kalan 17 code smell'in çoğu kural/stil farkı: Türkçe `...Testi` sonekli test sınıfı adları (S3577),
+JSF view-scoped bean'deki serileştirilmeyen alanlar (S1948), PL/SQL parametre adlarının tekrarı (S1192).
+Jenkinsfile'daki `Statik analiz` ve `Kalite kapısı` aşamaları (`withSonarQubeEnv`, `waitForQualityGate`)
+yerelde değil, yalnızca bu dosyada tanımlı; gerçek bir Jenkins'te koşmadı.
+
 ## Performans (k6)
 
 [perf/k6-siparis.js](perf/k6-siparis.js): hat sorgula → tarife değişikliği siparişi → `TAMAMLANDI`
@@ -199,7 +235,8 @@ Gerçek sunucu diskinde ve ayrı makinelerde sayılar farklı olacaktır.
 
 ## CI/CD ve Kubernetes
 
-[Jenkinsfile](Jenkinsfile): derleme → Testcontainers testleri (JUnit raporu) → imaj → compose + k6
+[Jenkinsfile](Jenkinsfile): derleme → Testcontainers testleri (JUnit + JaCoCo raporu) → SonarQube
+analizi ve kalite kapısı → imaj → compose + k6
 smoke → (main) registry'ye push → (main) `kubectl apply -k` ve `rollout status`. Jenkinsfile'ı
 **gerçek bir Jenkins üzerinde çalıştırmadım**; içindeki adımları (mvnw, docker build, compose + k6
 smoke) yerelde tek tek koştum.

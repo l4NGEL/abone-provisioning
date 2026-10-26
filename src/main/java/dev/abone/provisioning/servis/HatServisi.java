@@ -54,7 +54,10 @@ public class HatServisi {
 
     @Transactional(readOnly = true)
     public HatOzeti ozet(String msisdn) {
-        Hat hat = hatBul(msisdn);
+        return ozetOlustur(hatBul(msisdn));
+    }
+
+    private HatOzeti ozetOlustur(Hat hat) {
         Tarife t = hat.getTarife();
         return new HatOzeti(hat.getMsisdn(), hat.getAbone().getAdSoyad(), hat.getDurum(), t.getKod(), t.getAd(),
                 t.getAylikUcret(), hat.getAktivasyonTarihi(), hat.getKotaMb(), fatura.kalanKota(hat.getId()));
@@ -64,7 +67,7 @@ public class HatServisi {
     public HatOzeti kullanimEkle(String msisdn, BigDecimal mb) {
         Hat hat = hatBul(msisdn);
         fatura.kullanimEkle(hat.getId(), mb, Zaman.simdi(saat));
-        return ozet(msisdn);
+        return ozetOlustur(hat);
     }
 
     @Transactional(readOnly = true)
